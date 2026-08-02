@@ -1,77 +1,59 @@
-import { useEffect, useMemo, useState } from "react";
-import BookmarkList, { type BookmarkItem } from "./ListComponent/BookmarkList";
-
-type BookmarkTreeCategory = {
-  id: string;
-  name: string;
-  sortOrder: number;
-  bookmarks: BookmarkItem[];
-};
-
-type BookmarkTreeResponse = {
-  data: BookmarkTreeCategory[];
-};
+import { useCallback, useEffect, useState } from "react";
+import CategoryNavigation from "./components/CategoryNavigation";
+import CategorySection from "./components/CategorySection";
+import SideMenu from "./components/SideMenu";
+import SiteHeader from "./components/SiteHeader";
+import { useBookmarkCategories } from "./hooks/useBookmarkCategories";
+import { categoryAnchor } from "./lib/categoryAnchor";
 
 function App() {
-  const [categories, setCategories] = useState<BookmarkTreeCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { categories, categoryStatus, bookmarkStates, expanded, loadCategories, loadBookmarks, openCategory, toggleCategory } = useBookmarkCategories();
 
-  const apiRoot = useMemo(() => {
-    const raw = import.meta.env.VITE_ROOT_URL;
-    if (raw === undefined || raw === null) return "";
-    return String(raw).replace(/\/$/, "");
-  }, []);
+  const selectCategory = useCallback((categoryId: string) => {
+    openCategory(categoryId);
+    requestAnimationFrame(() => document.getElementById(categoryAnchor(categoryId))?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  }, [openCategory]);
+  const closeMenu = useCallback(() => setMenuOpen(false), []);
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-
-        const response = await fetch(`${apiRoot}/api/bookmark-tree`, {
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          throw new Error(`APIエラー: ${response.status}`);
-        }
-
-        const json = (await response.json()) as BookmarkTreeResponse;
-        setCategories(Array.isArray(json.data) ? json.data : []);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return;
-        setError("ブックマークの取得に失敗しました。");
-      } finally {
-        setLoading(false);
-      }
+    if (categoryStatus !== "ready") return;
+    const openFromHash = () => {
+      const hash = window.location.hash.slice(1);
+      const category = categories.find((item) => categoryAnchor(item.id) === hash);
+      if (category) selectCategory(category.id);
     };
-
-    loadData();
-
-    return () => controller.abort();
-  }, [apiRoot]);
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, [categories, categoryStatus, selectCategory]);
 
   return (
-    <main className="app-shell">
-      <section className="hero-card">
-        <p className="eyebrow">便利サイト一覧</p>
-        <h1>bookMarkSite</h1>
-        <p className="lead">以下ブックマーク一覧（API取得）</p>
-        {loading && <p className="status-text">読み込み中...</p>}
-        {error && <p className="status-text status-text--error">{error}</p>}
-        {!loading &&
-          !error &&
-          categories.map((category) => (
-            <section key={category.id}>
-              <h2>{category.name}</h2>
-              <BookmarkList items={category.bookmarks} />
+    <div id="top" className="app-shell">
+      <SiteHeader menuOpen={menuOpen} onMenuOpen={() => setMenuOpen(true)} />
+      <SideMenu open={menuOpen} categories={categories} onClose={closeMenu} onSelect={selectCategory} />
+      <main>
+        <section className="hero" aria-labelledby="page-title">
+          <h1 id="page-title">bookMarkSite</h1>
+          <p className="lead">presented by KOKAGE</p>
+        </section>
+        {categoryStatus === "loading" && <p className="page-status" role="status">カテゴリを読み込んでいます…</p>}
+        {categoryStatus === "error" && <div className="page-status page-status--error" role="alert"><p>カテゴリを取得できませんでした。</p><button type="button" onClick={() => void loadCategories()}>再試行</button></div>}
+        {categoryStatus === "ready" && categories.length === 0 && <p className="page-status">カテゴリはまだありません。</p>}
+        {categories.length > 0 && (
+          <>
+            <section className="table-of-contents" aria-labelledby="toc-title">
+              <div><p className="section-label">INDEX</p><h2 id="toc-title">目次</h2></div>
+              <CategoryNavigation categories={categories} onSelect={selectCategory} />
             </section>
-          ))}
-      </section>
-    </main>
+            <div className="category-list">
+              {categories.map((category) => <CategorySection key={category.id} category={category} expanded={expanded.has(category.id)} state={bookmarkStates[category.id]} onToggle={() => toggleCategory(category.id)} onRetry={() => void loadBookmarks(category.id, true)} />)}
+            </div>
+          </>
+        )}
+      </main>
+      <footer><p>Bookmark Library</p><a href="#top">ページ先頭へ</a></footer>
+    </div>
   );
 }
 

@@ -1,25 +1,17 @@
+import type { Bookmark } from "../types";
 import BookmarkListItem from "./BookmarkListItem";
 
-export type BookmarkItem = {
-  name: string;
-  url: string;
-};
-
 type BookmarkListProps = {
-  items: BookmarkItem[];
+  items: Bookmark[];
 };
 
 function BookmarkList({ items }: BookmarkListProps) {
   return (
-    <div className="bookmark-list">
+    <ul className="bookmark-list">
       {items.map((item) => (
-        <BookmarkListItem
-          key={`${item.name}-${item.url}`}
-          name={item.name}
-          url={item.url}
-        />
+        <li key={item.id}><BookmarkListItem name={item.name} url={item.url} /></li>
       ))}
-    </div>
+    </ul>
   );
 }
 

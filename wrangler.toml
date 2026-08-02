@@ -1,5 +1,9 @@
 name = "ichikenbookmark"
 compatibility_date = "2026-04-08"
+routes = [
+  { pattern = "bookmark.kokage-studio.com/*", zone_name = "kokage-studio.com" }
+]
 
 [assets]
 directory = "./dist"
+not_found_handling = "single-page-application"

@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="日々使うツールと読み返したい記事をカテゴリ別に整理した個人ライブラリ" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f8f4" />
+    <script>
+      (() => {
+        const key = "bookmark-library-theme";
+        let theme;
+        try {
+          const saved = localStorage.getItem(key);
+          theme = saved === "light" || saved === "dark" ? saved : undefined;
+        } catch (_) {}
+        if (!theme) theme = typeof matchMedia === "function" && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        const themeColor = document.querySelector('meta[name="theme-color"]');
+        if (themeColor) themeColor.content = theme === "dark" ? "#111815" : "#f7f8f4";
+        try { localStorage.setItem(key, theme); } catch (_) {}
+      })();
+    </script>
     <link rel="icon" href="/favicon.ico" />
     <title>Bookmark Library</title>
   </head>

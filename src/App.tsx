@@ -5,9 +5,11 @@ import SideMenu from "./components/SideMenu";
 import SiteHeader from "./components/SiteHeader";
 import { useBookmarkCategories } from "./hooks/useBookmarkCategories";
 import { categoryAnchor } from "./lib/categoryAnchor";
+import { applyTheme, currentTheme, type Theme } from "./theme";
 
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(currentTheme);
   const { categories, categoryStatus, bookmarkStates, expanded, loadCategories, loadBookmarks, openCategory, toggleCategory } = useBookmarkCategories();
 
   const selectCategory = useCallback((categoryId: string) => {
@@ -15,6 +17,13 @@ function App() {
     requestAnimationFrame(() => document.getElementById(categoryAnchor(categoryId))?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }, [openCategory]);
   const closeMenu = useCallback(() => setMenuOpen(false), []);
+  const toggleTheme = useCallback(() => {
+    setTheme((previous) => {
+      const next = previous === "dark" ? "light" : "dark";
+      applyTheme(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => {
     if (categoryStatus !== "ready") return;
@@ -30,7 +39,7 @@ function App() {
 
   return (
     <div id="top" className="app-shell">
-      <SiteHeader menuOpen={menuOpen} onMenuOpen={() => setMenuOpen(true)} />
+      <SiteHeader menuOpen={menuOpen} onMenuOpen={() => setMenuOpen(true)} theme={theme} onThemeToggle={toggleTheme} />
       <SideMenu open={menuOpen} categories={categories} onClose={closeMenu} onSelect={selectCategory} />
       <main>
         <section className="hero" aria-labelledby="page-title">
